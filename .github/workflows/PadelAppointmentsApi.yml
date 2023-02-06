@@ -31,7 +31,7 @@ jobs:
         dotnet new tool-manifest
         dotnet tool install dotnet-ef
     - name: Generate scripts
-      run: dotnet ef migrations script --output ${{env.WORKING_DIRECTORY}}/sql/sql-script.sql --idempotent --context ApplicationDbContext
+      run: dotnet ef migrations script --output ${{env.WORKING_DIRECTORY}}/sql/sql-script.sql --idempotent --context ApplicationDbContext --project "./PadelAppointments/PadelAppointments.csproj"
     - name: Azure SQL Deploy
       uses: Azure/sql-action@v1
       with:
