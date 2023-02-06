@@ -80,8 +80,8 @@ app.MapPost("/courts/{id}/appointments", async (ApplicationDbContext db, int id,
 {
     var appointment = new Appointment()
     {
-        Date = DateOnly.FromDateTime(request.Date),
-        Time = TimeOnly.FromDateTime(request.Date),
+        Date = request.Date,
+        Time = request.Time,
         CustomerName = request.CustomerName,
         CustomerPhoneNumber = request.CustomerPhoneNumber,
         CourtId = id,
