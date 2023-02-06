@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.OpenApi.Models;
 using PadelAppointments;
 using PadelAppointments.Entities;
@@ -28,6 +27,10 @@ builder.Services.AddCors(options =>
     options.AddDefaultPolicy(builder =>
     {
         builder.WithOrigins(allowedOrigins);
+        builder.WithExposedHeaders("Content-Disposition");
+        builder.SetIsOriginAllowedToAllowWildcardSubdomains();
+        builder.AllowAnyHeader();
+        builder.AllowAnyMethod();
     });
 });
 
