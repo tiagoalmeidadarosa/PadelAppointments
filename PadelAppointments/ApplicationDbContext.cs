@@ -58,6 +58,8 @@ namespace PadelAppointments
                 // Time is a TimeOnly property and time on database
                 builder.Property(x => x.Time)
                     .HasConversion<TimeOnlyConverter, TimeOnlyComparer>();
+
+                builder.HasIndex(x => new { x.Date, x.Time }).IsUnique();
             });
         }
     }
