@@ -59,7 +59,7 @@ namespace PadelAppointments
                 builder.Property(x => x.Time)
                     .HasConversion<TimeOnlyConverter, TimeOnlyComparer>();
 
-                builder.HasIndex(x => new { x.Date, x.Time }).IsUnique();
+                builder.HasIndex(x => new { x.Date, x.Time, x.CourtId }).IsUnique();
             });
         }
     }
