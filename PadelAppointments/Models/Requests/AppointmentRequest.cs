@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using PadelAppointments.Enums;
+using System.ComponentModel.DataAnnotations;
 
 namespace PadelAppointments.Models.Requests
 {
@@ -15,5 +16,7 @@ namespace PadelAppointments.Models.Requests
 
         [Required]
         public string? CustomerPhoneNumber { get; set; }
+
+        public RecurrenceType? RecurrenceType { get; set; }
     }
 }
