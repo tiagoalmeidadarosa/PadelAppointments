@@ -14,6 +14,10 @@ namespace PadelAppointments.Entities
         [ForeignKey("Court")]
         public int CourtId { get; set; }
 
+        [ForeignKey("Recurrence")]
+        public int? RecurrenceId { get; set; }
+
         public virtual Court? Court { get; set; }
+        public virtual Recurrence? Recurrence { get; set; }
     }
 }

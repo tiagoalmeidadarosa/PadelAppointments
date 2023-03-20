@@ -1,4 +1,6 @@
-﻿namespace PadelAppointments.Models.Responses
+﻿using PadelAppointments.Enums;
+
+namespace PadelAppointments.Models.Responses
 {
     public class AppointmentResponse
     {
@@ -8,5 +10,6 @@
 
         public string? CustomerName { get; set; }
         public string? CustomerPhoneNumber { get; set; }
+        public RecurrenceType? RecurrenceType { get; set; }
     }
 }
