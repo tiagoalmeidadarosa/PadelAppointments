@@ -15,33 +15,32 @@ namespace PadelAppointments
 
             app.MapGet("/courts", async (ApplicationDbContext db) =>
             {
-                return await db.Courts
-                    .AsNoTracking()
-                    .Select(c => new CourtsResponse()
-                    {
-                        Id = c.Id,
-                        Name = c.Name,
-                    })
-                    .ToListAsync();
+                return await GetCourts(db);
             })
             .Produces<List<CourtsResponse>>();
 
+            app.MapGet("/courts/appointments", async (ApplicationDbContext db, DateOnly date) =>
+            {
+                var courtsAppointments = new List<CourtAppointmentsResponse>();
+
+                var courts = await GetCourts(db);
+                foreach (var court in courts)
+                {
+                    var appointments = await GetAppointments(db, court.Id, date);
+                    courtsAppointments.Add(new()
+                    {
+                        Id = court.Id,
+                        Appointments = appointments,
+                    });
+                }
+
+                return courtsAppointments;
+            })
+            .Produces<List<CourtAppointmentsResponse>>();
+
             app.MapGet("/courts/{id}/appointments", async (ApplicationDbContext db, int id, DateOnly date) =>
             {
-                return await db.Appointments
-                    .AsNoTracking()
-                    .Include(a => a.Recurrence)
-                    .Where(a => a.CourtId == id && a.Date == date)
-                    .Select(a => new AppointmentResponse()
-                    {
-                        Id = a.Id,
-                        Date = a.Date,
-                        Time = a.Time,
-                        CustomerName = a.CustomerName,
-                        CustomerPhoneNumber = a.CustomerPhoneNumber,
-                        RecurrenceType = a.Recurrence == null ? null : a.Recurrence.Type,
-                    })
-                    .ToListAsync();
+                return await GetAppointments(db, id, date);
             })
             .Produces<List<AppointmentResponse>>();
 
@@ -169,6 +168,36 @@ namespace PadelAppointments
             })
             .Produces(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status404NotFound);
+        }
+
+        private static async Task<List<CourtsResponse>> GetCourts(ApplicationDbContext db)
+        {
+            return await db.Courts
+                .AsNoTracking()
+                .Select(c => new CourtsResponse()
+                {
+                    Id = c.Id,
+                    Name = c.Name,
+                })
+                .ToListAsync();
+        }
+
+        private static async Task<List<AppointmentResponse>> GetAppointments(ApplicationDbContext db, int id, DateOnly date)
+        {
+            return await db.Appointments
+                .AsNoTracking()
+                .Include(a => a.Recurrence)
+                .Where(a => a.CourtId == id && a.Date == date)
+                .Select(a => new AppointmentResponse()
+                {
+                    Id = a.Id,
+                    Date = a.Date,
+                    Time = a.Time,
+                    CustomerName = a.CustomerName,
+                    CustomerPhoneNumber = a.CustomerPhoneNumber,
+                    RecurrenceType = a.Recurrence == null ? null : a.Recurrence.Type,
+                })
+                .ToListAsync();
         }
 
         private static async Task<Appointment> CreateAppointment(ApplicationDbContext db, int courtId, AppointmentRequest request)
