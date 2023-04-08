@@ -10,6 +10,7 @@ namespace PadelAppointments.Entities
 
         public string? CustomerName { get; set; }
         public string? CustomerPhoneNumber { get; set; }
+        public double Price { get; set; }
 
         [ForeignKey("Court")]
         public int CourtId { get; set; }

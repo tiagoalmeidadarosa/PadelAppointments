@@ -10,6 +10,7 @@ namespace PadelAppointments.Models.Responses
 
         public string? CustomerName { get; set; }
         public string? CustomerPhoneNumber { get; set; }
+        public double Price { get; set; }
         public RecurrenceType? RecurrenceType { get; set; }
     }
 }

@@ -17,6 +17,9 @@ namespace PadelAppointments.Models.Requests
         [Required]
         public string? CustomerPhoneNumber { get; set; }
 
+        [Required]
+        public double Price { get; set; }
+
         public RecurrenceType? RecurrenceType { get; set; }
     }
 }

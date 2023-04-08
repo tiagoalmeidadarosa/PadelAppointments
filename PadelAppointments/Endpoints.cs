@@ -107,6 +107,7 @@ namespace PadelAppointments
                 {
                     appointment.CustomerName = request.CustomerName;
                     appointment.CustomerPhoneNumber = request.CustomerPhoneNumber;
+                    appointment.Price = request.Price;
                 }
                 else
                 {
@@ -120,6 +121,7 @@ namespace PadelAppointments
                         {
                             a.CustomerName = request.CustomerName;
                             a.CustomerPhoneNumber = request.CustomerPhoneNumber;
+                            a.Price = request.Price;
                         }
                     }
                 }
@@ -195,6 +197,7 @@ namespace PadelAppointments
                     Time = a.Time,
                     CustomerName = a.CustomerName,
                     CustomerPhoneNumber = a.CustomerPhoneNumber,
+                    Price = a.Price,
                     RecurrenceType = a.Recurrence == null ? null : a.Recurrence.Type,
                 })
                 .ToListAsync();
@@ -208,6 +211,7 @@ namespace PadelAppointments
                 Time = request.Time,
                 CustomerName = request.CustomerName,
                 CustomerPhoneNumber = request.CustomerPhoneNumber,
+                Price = request.Price,
                 CourtId = courtId,
             };
 

@@ -64,6 +64,10 @@ namespace PadelAppointments
                     .HasColumnType("nvarchar(32)");
 
                 builder
+                    .Property(a => a.Price)
+                    .IsRequired();
+
+                builder
                     .HasOne(a => a.Court)
                     .WithMany(c => c.Appointments)
                     .HasForeignKey(a => a.CourtId);
