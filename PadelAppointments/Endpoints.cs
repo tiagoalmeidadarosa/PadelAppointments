@@ -10,16 +10,37 @@ namespace PadelAppointments
     {
         public static void MapEndpoints(this WebApplication app)
         {
+            app.MapGroup("login")
+                .MapLoginGroup();
+
+            app.MapGroup("courts")
+                .MapCourtsGroup();
+                //.RequireAuthorization();
+        }
+
+        public static RouteGroupBuilder MapLoginGroup(this RouteGroupBuilder group)
+        {
+            group.MapPost("/", async (ApplicationDbContext db, int id, AppointmentRequest request) =>
+            {
+                //logic here
+            })
+            .Produces(StatusCodes.Status200OK);
+
+            return group;
+        }
+
+        public static RouteGroupBuilder MapCourtsGroup(this RouteGroupBuilder group)
+        {
             const int numberOfDaysInAWeek = 7;
             const int numberOfWeeksInAMonth = 4;
 
-            app.MapGet("/courts", async (ApplicationDbContext db) =>
+            group.MapGet("/", async (ApplicationDbContext db) =>
             {
                 return await GetCourts(db);
             })
             .Produces<List<CourtsResponse>>();
 
-            app.MapGet("/courts/appointments", async (ApplicationDbContext db, DateOnly date) =>
+            group.MapGet("/appointments", async (ApplicationDbContext db, DateOnly date) =>
             {
                 var courtsAppointments = new List<CourtAppointmentsResponse>();
 
@@ -38,13 +59,13 @@ namespace PadelAppointments
             })
             .Produces<List<CourtAppointmentsResponse>>();
 
-            app.MapGet("/courts/{id}/appointments", async (ApplicationDbContext db, int id, DateOnly date) =>
+            group.MapGet("/{id}/appointments", async (ApplicationDbContext db, int id, DateOnly date) =>
             {
                 return await GetAppointments(db, id, date);
             })
             .Produces<List<AppointmentResponse>>();
 
-            app.MapPost("/courts/{id}/appointments", async (ApplicationDbContext db, int id, AppointmentRequest request) =>
+            group.MapPost("/{id}/appointments", async (ApplicationDbContext db, int id, AppointmentRequest request) =>
             {
                 Appointment appointment;
                 if (request.RecurrenceType is null)
@@ -92,7 +113,7 @@ namespace PadelAppointments
             })
             .Produces(StatusCodes.Status201Created);
 
-            app.MapPut("/courts/{id}/appointments/{appointmentId}", async (ApplicationDbContext db, int id,
+            group.MapPut("/{id}/appointments/{appointmentId}", async (ApplicationDbContext db, int id,
                 int appointmentId, UpdateAppointmentRequest request) =>
             {
                 var appointment = await db.Appointments
@@ -133,7 +154,7 @@ namespace PadelAppointments
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound);
 
-            app.MapDelete("/courts/{id}/appointments/{appointmentId}", async (ApplicationDbContext db, int id, int appointmentId) =>
+            group.MapDelete("/{id}/appointments/{appointmentId}", async (ApplicationDbContext db, int id, int appointmentId) =>
             {
                 var appointment = await db.Appointments
                     .FirstOrDefaultAsync(a => a.Id == appointmentId && a.CourtId == id);
@@ -170,6 +191,8 @@ namespace PadelAppointments
             })
             .Produces(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status404NotFound);
+
+            return group;
         }
 
         private static async Task<List<CourtsResponse>> GetCourts(ApplicationDbContext db)
