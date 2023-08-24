@@ -10,23 +10,9 @@ namespace PadelAppointments
     {
         public static void MapEndpoints(this WebApplication app)
         {
-            app.MapGroup("login")
-                .MapLoginGroup();
-
             app.MapGroup("courts")
-                .MapCourtsGroup();
-                //.RequireAuthorization();
-        }
-
-        public static RouteGroupBuilder MapLoginGroup(this RouteGroupBuilder group)
-        {
-            group.MapPost("/", async (ApplicationDbContext db, int id, AppointmentRequest request) =>
-            {
-                //logic here
-            })
-            .Produces(StatusCodes.Status200OK);
-
-            return group;
+                .MapCourtsGroup()
+                .RequireAuthorization();
         }
 
         public static RouteGroupBuilder MapCourtsGroup(this RouteGroupBuilder group)

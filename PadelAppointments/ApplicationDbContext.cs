@@ -1,13 +1,14 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using PadelAppointments.Converters;
 using PadelAppointments.Entities;
 using PadelAppointments.Enums;
 
 namespace PadelAppointments
 {
-    class ApplicationDbContext : DbContext
+    class ApplicationDbContext : IdentityDbContext<MyUser>
     {
-        public ApplicationDbContext(DbContextOptions options) : base(options) { }
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
         public DbSet<Court> Courts { get; set; } = null!;
         public DbSet<Appointment> Appointments { get; set; } = null!;
@@ -15,6 +16,8 @@ namespace PadelAppointments
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            base.OnModelCreating(modelBuilder);
+
             modelBuilder.Entity<Court>(builder =>
             {
                 builder.ToTable("Courts");
