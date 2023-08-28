@@ -30,7 +30,7 @@ jobs:
     - name: Install EF Tool
       run: |
         dotnet new tool-manifest
-        dotnet tool install dotnet-ef
+        dotnet tool install dotnet-ef --version 8.0.0-preview.7.23375.4
     - name: Generate scripts
       run: dotnet ef migrations script --output ${{env.WORKING_DIRECTORY}}/sql/sql-script.sql --idempotent --context ApplicationDbContext --project "./PadelAppointments/PadelAppointments.csproj"
     - name: Azure SQL Deploy
