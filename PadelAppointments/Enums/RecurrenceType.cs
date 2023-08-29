@@ -5,7 +5,6 @@ namespace PadelAppointments.Enums
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum RecurrenceType
     {
-		NextWeek,
-		NextMonth,
+        Yearly,
 	}
 }

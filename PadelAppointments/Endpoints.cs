@@ -138,8 +138,7 @@ namespace PadelAppointments
 
         public static RouteGroupBuilder MapCourtsGroup(this RouteGroupBuilder group)
         {
-            const int numberOfDaysInAWeek = 7;
-            const int numberOfWeeksInAMonth = 4;
+            const int NUMBER_OF_DAYS_IN_A_WEEK = 7;
 
             group.MapGet("/", async (ApplicationDbContext db) =>
             {
@@ -174,38 +173,26 @@ namespace PadelAppointments
 
             group.MapPost("/{id}/appointments", async (ApplicationDbContext db, int id, AppointmentRequest request) =>
             {
-                Appointment appointment;
-                if (request.RecurrenceType is null)
-                {
-                    appointment = await CreateAppointment(db, id, request);
-                }
-                else
+                Appointment appointment = await CreateAppointment(db, id, request);
+
+                if (request.HasRecurrence)
                 {
                     var recurrence = new Recurrence()
                     {
-                        Type = (RecurrenceType)request.RecurrenceType,
+                        Type = RecurrenceType.Yearly,
+                        Appointments = new List<Appointment>() { appointment },
                     };
 
-                    appointment = await CreateAppointment(db, id, request);
-                    recurrence.Appointments.Add(appointment);
-
-                    switch (request.RecurrenceType)
+                    while (true)
                     {
-                        case RecurrenceType.NextWeek:
-                            request.Date = request.Date.AddDays(numberOfDaysInAWeek);
-                            recurrence.Appointments.Add(await CreateAppointment(db, id, request));
+                        request.Date = request.Date.AddDays(NUMBER_OF_DAYS_IN_A_WEEK);
 
+                        if (request.Date.Year != DateTime.Now.Year)
+                        {
                             break;
-                        case RecurrenceType.NextMonth:
-                            for (int i = 1; i <= numberOfWeeksInAMonth - 1; i++) //minus 1 because the first record has already been created
-                            {
-                                request.Date = request.Date.AddDays(numberOfDaysInAWeek);
-                                recurrence.Appointments.Add(await CreateAppointment(db, id, request));
-                            }
+                        }
 
-                            break;
-                        default:
-                            break;
+                        recurrence.Appointments.Add(await CreateAppointment(db, id, request));
                     }
 
                     await db.Recurrences.AddAsync(recurrence);
@@ -220,8 +207,7 @@ namespace PadelAppointments
             })
             .Produces(StatusCodes.Status201Created);
 
-            group.MapPut("/{id}/appointments/{appointmentId}", async (ApplicationDbContext db, int id,
-                int appointmentId, UpdateAppointmentRequest request) =>
+            group.MapPut("/{id}/appointments/{appointmentId}", async (ApplicationDbContext db, int id, int appointmentId, UpdateAppointmentRequest request) =>
             {
                 var appointment = await db.Appointments
                     .FirstOrDefaultAsync(a => a.Id == appointmentId && a.CourtId == id);
@@ -261,7 +247,8 @@ namespace PadelAppointments
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound);
 
-            group.MapDelete("/{id}/appointments/{appointmentId}", async (ApplicationDbContext db, int id, int appointmentId) =>
+            group.MapDelete("/{id}/appointments/{appointmentId}", async ([FromServices] ApplicationDbContext db, [FromRoute] int id, 
+                [FromRoute] int appointmentId, [FromQuery] bool removeRecurrence) =>
             {
                 var appointment = await db.Appointments
                     .FirstOrDefaultAsync(a => a.Id == appointmentId && a.CourtId == id);
@@ -271,7 +258,7 @@ namespace PadelAppointments
                     return Results.NotFound();
                 }
 
-                if (appointment.RecurrenceId is null)
+                if (appointment.RecurrenceId is null || !removeRecurrence)
                 {
                     db.Appointments.Remove(appointment);
                 }
@@ -328,7 +315,7 @@ namespace PadelAppointments
                     CustomerName = a.CustomerName,
                     CustomerPhoneNumber = a.CustomerPhoneNumber,
                     Price = a.Price,
-                    RecurrenceType = a.Recurrence == null ? null : a.Recurrence.Type,
+                    HasRecurrence = a.Recurrence != null,
                 })
                 .ToListAsync();
         }

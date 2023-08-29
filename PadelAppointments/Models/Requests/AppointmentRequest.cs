@@ -1,5 +1,4 @@
-﻿using PadelAppointments.Enums;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace PadelAppointments.Models.Requests
 {
@@ -20,6 +19,6 @@ namespace PadelAppointments.Models.Requests
         [Required]
         public double Price { get; set; }
 
-        public RecurrenceType? RecurrenceType { get; set; }
+        public bool HasRecurrence { get; set; }
     }
 }
