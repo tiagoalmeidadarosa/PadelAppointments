@@ -1,8 +1,15 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using PadelAppointments.Entities;
 using PadelAppointments.Enums;
+using PadelAppointments.Models.Authentication;
 using PadelAppointments.Models.Requests;
 using PadelAppointments.Models.Responses;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 
 namespace PadelAppointments
 {
@@ -10,16 +17,136 @@ namespace PadelAppointments
     {
         public static void MapEndpoints(this WebApplication app)
         {
+            app.MapGroup("auth")
+                .MapAuthGroup();
+
+            app.MapGroup("courts")
+                .MapCourtsGroup()
+                .RequireAuthorization();
+        }
+
+        public static RouteGroupBuilder MapAuthGroup(this RouteGroupBuilder group)
+        {
+            group.MapPost("/login", async ([FromServices] UserManager<ApplicationUser> userManager, [FromServices] IConfiguration configuration, [FromBody] LoginModel model) =>
+            {
+                var user = await userManager.FindByNameAsync(model.Username);
+                if (user != null && await userManager.CheckPasswordAsync(user, model.Password))
+                {
+                    var userRoles = await userManager.GetRolesAsync(user);
+
+                    var authClaims = new List<Claim>
+                    {
+                        new Claim(ClaimTypes.Name, user.UserName!),
+                        new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                    };
+
+                    foreach (var userRole in userRoles)
+                    {
+                        authClaims.Add(new Claim(ClaimTypes.Role, userRole));
+                    }
+
+                    var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["JWT:Secret"]!));
+
+                    var token = new JwtSecurityToken(
+                        issuer: configuration["JWT:ValidIssuer"],
+                        audience: configuration["JWT:ValidAudience"],
+                        expires: DateTime.Now.AddHours(3),
+                        claims: authClaims,
+                        signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
+                    );
+
+                    return Results.Ok(new
+                    {
+                        token = new JwtSecurityTokenHandler().WriteToken(token),
+                        expiration = token.ValidTo
+                    });
+                }
+
+                return Results.Unauthorized();
+            })
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized);
+
+            group.MapPost("/register", async ([FromServices] UserManager<ApplicationUser> userManager, [FromServices] IConfiguration configuration, [FromBody] RegisterModel model) =>
+            {
+                var userExists = await userManager.FindByNameAsync(model.Username);
+                if (userExists != null)
+                {
+                    return Results.Problem("User already exists!");
+                }
+
+                var user = new ApplicationUser()
+                {
+                    Email = model.Email,
+                    SecurityStamp = Guid.NewGuid().ToString(),
+                    UserName = model.Username
+                };
+                var result = await userManager.CreateAsync(user, model.Password);
+                if (!result.Succeeded)
+                {
+                    return Results.Problem("User creation failed! Please check user details and try again.");
+                }
+
+                return Results.Ok("User created successfully!");
+            })
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status500InternalServerError);
+
+            group.MapPost("/register/admin", async ([FromServices] UserManager<ApplicationUser> userManager, [FromServices] RoleManager<IdentityRole> roleManager,
+                [FromServices] IConfiguration configuration, [FromBody] RegisterModel model) =>
+            {
+                var userExists = await userManager.FindByNameAsync(model.Username);
+                if (userExists != null)
+                {
+                    return Results.Problem("User already exists!");
+                }
+
+                ApplicationUser user = new ApplicationUser()
+                {
+                    Email = model.Email,
+                    SecurityStamp = Guid.NewGuid().ToString(),
+                    UserName = model.Username
+                };
+                var result = await userManager.CreateAsync(user, model.Password);
+                if (!result.Succeeded)
+                {
+                    return Results.Problem("User creation failed! Please check user details and try again.");
+                }
+
+                if (!await roleManager.RoleExistsAsync(UserRoles.Admin))
+                {
+                    await roleManager.CreateAsync(new IdentityRole(UserRoles.Admin));
+                }
+                if (!await roleManager.RoleExistsAsync(UserRoles.User))
+                {
+                    await roleManager.CreateAsync(new IdentityRole(UserRoles.User));
+                }
+
+                if (await roleManager.RoleExistsAsync(UserRoles.Admin))
+                {
+                    await userManager.AddToRoleAsync(user, UserRoles.Admin);
+                }
+
+                return Results.Ok("User created successfully!");
+            })
+            .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status500InternalServerError);
+
+            return group;
+        }
+
+        public static RouteGroupBuilder MapCourtsGroup(this RouteGroupBuilder group)
+        {
             const int numberOfDaysInAWeek = 7;
             const int numberOfWeeksInAMonth = 4;
 
-            app.MapGet("/courts", async (ApplicationDbContext db) =>
+            group.MapGet("/", async (ApplicationDbContext db) =>
             {
                 return await GetCourts(db);
             })
             .Produces<List<CourtsResponse>>();
 
-            app.MapGet("/courts/appointments", async (ApplicationDbContext db, DateOnly date) =>
+            group.MapGet("/appointments", async (ApplicationDbContext db, DateOnly date) =>
             {
                 var courtsAppointments = new List<CourtAppointmentsResponse>();
 
@@ -38,13 +165,13 @@ namespace PadelAppointments
             })
             .Produces<List<CourtAppointmentsResponse>>();
 
-            app.MapGet("/courts/{id}/appointments", async (ApplicationDbContext db, int id, DateOnly date) =>
+            group.MapGet("/{id}/appointments", async (ApplicationDbContext db, int id, DateOnly date) =>
             {
                 return await GetAppointments(db, id, date);
             })
             .Produces<List<AppointmentResponse>>();
 
-            app.MapPost("/courts/{id}/appointments", async (ApplicationDbContext db, int id, AppointmentRequest request) =>
+            group.MapPost("/{id}/appointments", async (ApplicationDbContext db, int id, AppointmentRequest request) =>
             {
                 Appointment appointment;
                 if (request.RecurrenceType is null)
@@ -92,7 +219,7 @@ namespace PadelAppointments
             })
             .Produces(StatusCodes.Status201Created);
 
-            app.MapPut("/courts/{id}/appointments/{appointmentId}", async (ApplicationDbContext db, int id,
+            group.MapPut("/{id}/appointments/{appointmentId}", async (ApplicationDbContext db, int id,
                 int appointmentId, UpdateAppointmentRequest request) =>
             {
                 var appointment = await db.Appointments
@@ -133,7 +260,7 @@ namespace PadelAppointments
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound);
 
-            app.MapDelete("/courts/{id}/appointments/{appointmentId}", async (ApplicationDbContext db, int id, int appointmentId) =>
+            group.MapDelete("/{id}/appointments/{appointmentId}", async (ApplicationDbContext db, int id, int appointmentId) =>
             {
                 var appointment = await db.Appointments
                     .FirstOrDefaultAsync(a => a.Id == appointmentId && a.CourtId == id);
@@ -170,6 +297,8 @@ namespace PadelAppointments
             })
             .Produces(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status404NotFound);
+
+            return group;
         }
 
         private static async Task<List<CourtsResponse>> GetCourts(ApplicationDbContext db)
