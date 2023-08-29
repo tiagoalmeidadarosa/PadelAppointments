@@ -39,6 +39,7 @@ jobs:
         server-name: tcp:padel-appointments.database.windows.net
         connection-string: ${{ secrets.SQL_SERVER_CONNECTION_STRING }}
         sql-file: ${{env.WORKING_DIRECTORY}}/sql/sql-script.sql
+        arguments: '/p:IgnoreQuotedIdentifiers=true'
     - name: Publish Artifacts
       uses: actions/upload-artifact@v1.0.0
       with:
