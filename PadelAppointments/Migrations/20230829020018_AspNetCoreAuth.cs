@@ -96,8 +96,8 @@ namespace PadelAppointments.Migrations
                 name: "AspNetUserLogins",
                 columns: table => new
                 {
-                    LoginProvider = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    ProviderKey = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    LoginProvider = table.Column<string>(type: "nvarchar(225)", nullable: false),
+                    ProviderKey = table.Column<string>(type: "nvarchar(225)", nullable: false),
                     ProviderDisplayName = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     UserId = table.Column<string>(type: "nvarchar(450)", nullable: false)
                 },
@@ -116,8 +116,8 @@ namespace PadelAppointments.Migrations
                 name: "AspNetUserRoles",
                 columns: table => new
                 {
-                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    RoleId = table.Column<string>(type: "nvarchar(450)", nullable: false)
+                    UserId = table.Column<string>(type: "nvarchar(225)", nullable: false),
+                    RoleId = table.Column<string>(type: "nvarchar(225)", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -140,9 +140,9 @@ namespace PadelAppointments.Migrations
                 name: "AspNetUserTokens",
                 columns: table => new
                 {
-                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    LoginProvider = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    UserId = table.Column<string>(type: "nvarchar(150)", nullable: false),
+                    LoginProvider = table.Column<string>(type: "nvarchar(150)", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(150)", nullable: false),
                     Value = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
