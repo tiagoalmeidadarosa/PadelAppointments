@@ -39,7 +39,8 @@ builder.Services
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Secret"]!))
         };
     });
-builder.Services.AddAuthorizationBuilder();
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy(UserRoles.Admin, policy => policy.RequireRole(UserRoles.Admin));
 
 builder.Services.AddSwaggerGen(c =>
 {
