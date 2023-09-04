@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using PadelAppointments.Entities;
-using PadelAppointments.Enums;
 using PadelAppointments.Models.Authentication;
 using PadelAppointments.Models.Requests;
 using PadelAppointments.Models.Responses;
@@ -22,6 +21,10 @@ namespace PadelAppointments
 
             app.MapGroup("courts")
                 .MapCourtsGroup()
+                .RequireAuthorization();
+
+            app.MapGroup("appointments")
+                .MapAppointmentsGroup()
                 .RequireAuthorization();
         }
 
@@ -138,51 +141,71 @@ namespace PadelAppointments
 
         public static RouteGroupBuilder MapCourtsGroup(this RouteGroupBuilder group)
         {
-            const int NUMBER_OF_DAYS_IN_A_WEEK = 7;
-
             group.MapGet("/", async (ApplicationDbContext db) =>
             {
-                return await GetCourts(db);
+                return await db.Courts
+                    .AsNoTracking()
+                    .Select(c => new CourtsResponse()
+                    {
+                        Id = c.Id,
+                        Name = c.Name,
+                    })
+                    .ToListAsync();
             })
             .Produces<List<CourtsResponse>>();
 
-            group.MapGet("/appointments", async (ApplicationDbContext db, DateOnly date) =>
+            group.MapGet("/{courtId}/schedules", async (ApplicationDbContext db, int courtId, DateOnly date) =>
             {
-                var courtsAppointments = new List<CourtAppointmentsResponse>();
-
-                var courts = await GetCourts(db);
-                foreach (var court in courts)
-                {
-                    var appointments = await GetAppointments(db, court.Id, date);
-                    courtsAppointments.Add(new()
+                return await db.Schedules
+                    .AsNoTracking()
+                    .Include(s => s.Appointment)
+                    .Where(s => s.CourtId == courtId && s.Date == date)
+                    .Select(s => new ScheduleResponse()
                     {
-                        Id = court.Id,
-                        Appointments = appointments,
-                    });
-                }
-
-                return courtsAppointments;
+                        Id = s.Id,
+                        Date = s.Date,
+                        Time = s.Time,
+                        CourtId = s.CourtId,
+                        Appointment = new AppointmentResponse()
+                        {
+                            Id = s.Appointment!.Id,
+                            Date = s.Appointment.Date,
+                            CustomerName = s.Appointment.CustomerName,
+                            CustomerPhoneNumber = s.Appointment.CustomerPhoneNumber,
+                            Price = s.Appointment.Price,
+                            HasRecurrence = s.Appointment.HasRecurrence,
+                        },
+                    })
+                    .ToListAsync();
             })
-            .Produces<List<CourtAppointmentsResponse>>();
+            .Produces<List<ScheduleResponse>>();
 
-            group.MapGet("/{id}/appointments", async (ApplicationDbContext db, int id, DateOnly date) =>
-            {
-                return await GetAppointments(db, id, date);
-            })
-            .Produces<List<AppointmentResponse>>();
+            return group;
+        }
 
-            group.MapPost("/{id}/appointments", async (ApplicationDbContext db, int id, AppointmentRequest request) =>
+        public static RouteGroupBuilder MapAppointmentsGroup(this RouteGroupBuilder group)
+        {
+            group.MapPost("/", async (ApplicationDbContext db, AppointmentRequest request) =>
             {
-                Appointment appointment = await CreateAppointment(db, id, request);
+                const int NUMBER_OF_DAYS_IN_A_WEEK = 7;
+
+                var appointment = new Appointment()
+                {
+                    Date = request.Date,
+                    CustomerName = request.CustomerName,
+                    CustomerPhoneNumber = request.CustomerPhoneNumber,
+                    Price = request.Price,
+                    HasRecurrence = request.HasRecurrence,
+                    Schedules = request.Schedules.Select(s => new Schedule()
+                    {
+                        Date = s.Date,
+                        Time = s.Time,
+                        CourtId = s.CourtId,
+                    }).ToList(),
+                };
 
                 if (request.HasRecurrence)
                 {
-                    var recurrence = new Recurrence()
-                    {
-                        Type = RecurrenceType.Yearly,
-                        Appointments = new List<Appointment>() { appointment },
-                    };
-
                     while (true)
                     {
                         request.Date = request.Date.AddDays(NUMBER_OF_DAYS_IN_A_WEEK);
@@ -192,53 +215,44 @@ namespace PadelAppointments
                             break;
                         }
 
-                        recurrence.Appointments.Add(await CreateAppointment(db, id, request));
+                        foreach (var schedule in request.Schedules)
+                        {
+                            appointment.Schedules.Add(new()
+                            {
+                                Date = request.Date,
+                                Time = schedule.Time,
+                                CourtId = schedule.CourtId,
+                            });
+                        }
                     }
-
-                    await db.Recurrences.AddAsync(recurrence);
                 }
 
+                await db.Appointments.AddAsync(appointment);
                 await db.SaveChangesAsync();
 
-                //Fix cycle reference error
-                appointment.Recurrence = null;
+                // Fix cycle reference error
+                foreach (var schedule in appointment.Schedules)
+                {
+                    schedule.Appointment = null;
+                }
 
-                return Results.Created($"/courts/{id}/appointments/{appointment.Id}", appointment);
+                return Results.Created($"/{appointment.Id}", appointment);
             })
             .Produces(StatusCodes.Status201Created);
 
-            group.MapPut("/{id}/appointments/{appointmentId}", async (ApplicationDbContext db, int id, int appointmentId, UpdateAppointmentRequest request) =>
+            group.MapPut("/{appointmentId}", async (ApplicationDbContext db, int appointmentId, UpdateAppointmentRequest request) =>
             {
                 var appointment = await db.Appointments
-                    .FirstOrDefaultAsync(a => a.Id == appointmentId && a.CourtId == id);
+                    .FirstOrDefaultAsync(a => a.Id == appointmentId);
 
                 if (appointment == null)
                 {
                     return Results.NotFound();
                 }
 
-                if (appointment.RecurrenceId is null)
-                {
-                    appointment.CustomerName = request.CustomerName;
-                    appointment.CustomerPhoneNumber = request.CustomerPhoneNumber;
-                    appointment.Price = request.Price;
-                }
-                else
-                {
-                    var recurrence = await db.Recurrences
-                        .Include(r => r.Appointments)
-                        .FirstOrDefaultAsync(r => r.Id == appointment.RecurrenceId);
-
-                    if (recurrence is not null)
-                    {
-                        foreach (var a in recurrence.Appointments)
-                        {
-                            a.CustomerName = request.CustomerName;
-                            a.CustomerPhoneNumber = request.CustomerPhoneNumber;
-                            a.Price = request.Price;
-                        }
-                    }
-                }
+                appointment.CustomerName = request.CustomerName;
+                appointment.CustomerPhoneNumber = request.CustomerPhoneNumber;
+                appointment.Price = request.Price;
 
                 await db.SaveChangesAsync();
 
@@ -247,38 +261,33 @@ namespace PadelAppointments
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound);
 
-            group.MapDelete("/{id}/appointments/{appointmentId}", async ([FromServices] ApplicationDbContext db, [FromRoute] int id, 
-                [FromRoute] int appointmentId, [FromQuery] bool removeRecurrence) =>
+            group.MapDelete("/{appointmentId}/schedules/{scheduleId}", async ([FromServices] ApplicationDbContext db,
+                [FromRoute] int appointmentId, [FromRoute] int scheduleId, [FromQuery] bool removeRecurrence) =>
             {
                 var appointment = await db.Appointments
-                    .FirstOrDefaultAsync(a => a.Id == appointmentId && a.CourtId == id);
+                    .Include(s => s.Schedules)
+                    .FirstOrDefaultAsync(a => a.Id == appointmentId);
 
                 if (appointment == null)
                 {
                     return Results.NotFound();
                 }
 
-                if (appointment.RecurrenceId is null || !removeRecurrence)
-                {
-                    db.Appointments.Remove(appointment);
-                }
-                else
-                {
-                    var recurrence = await db.Recurrences
-                        .Include(r => r.Appointments)
-                        .FirstOrDefaultAsync(r => r.Id == appointment.RecurrenceId);
+                var schedule = await db.Schedules
+                    .FirstOrDefaultAsync(a => a.Id == scheduleId);
 
-                    if (recurrence is not null)
-                    {
-                        foreach (var a in recurrence.Appointments)
-                        {
-                            db.Appointments.Remove(a);
-                        }
-
-                        db.Recurrences.Remove(recurrence);
-                    }
+                if (schedule == null)
+                {
+                    return Results.NotFound();
                 }
 
+                var schedulesToDelete = appointment.Schedules!
+                    .Where(s => removeRecurrence
+                        ? s.Date >= schedule.Date
+                        : s.Date == schedule.Date)
+                    .ToList();
+
+                db.Schedules.RemoveRange(schedulesToDelete);
                 await db.SaveChangesAsync();
 
                 return Results.Ok();
@@ -287,54 +296,6 @@ namespace PadelAppointments
             .Produces(StatusCodes.Status404NotFound);
 
             return group;
-        }
-
-        private static async Task<List<CourtsResponse>> GetCourts(ApplicationDbContext db)
-        {
-            return await db.Courts
-                .AsNoTracking()
-                .Select(c => new CourtsResponse()
-                {
-                    Id = c.Id,
-                    Name = c.Name,
-                })
-                .ToListAsync();
-        }
-
-        private static async Task<List<AppointmentResponse>> GetAppointments(ApplicationDbContext db, int id, DateOnly date)
-        {
-            return await db.Appointments
-                .AsNoTracking()
-                .Include(a => a.Recurrence)
-                .Where(a => a.CourtId == id && a.Date == date)
-                .Select(a => new AppointmentResponse()
-                {
-                    Id = a.Id,
-                    Date = a.Date,
-                    Time = a.Time,
-                    CustomerName = a.CustomerName,
-                    CustomerPhoneNumber = a.CustomerPhoneNumber,
-                    Price = a.Price,
-                    HasRecurrence = a.Recurrence != null,
-                })
-                .ToListAsync();
-        }
-
-        private static async Task<Appointment> CreateAppointment(ApplicationDbContext db, int courtId, AppointmentRequest request)
-        {
-            var appointment = new Appointment()
-            {
-                Date = request.Date,
-                Time = request.Time,
-                CustomerName = request.CustomerName,
-                CustomerPhoneNumber = request.CustomerPhoneNumber,
-                Price = request.Price,
-                CourtId = courtId,
-            };
-
-            await db.Appointments.AddAsync(appointment);
-
-            return appointment;
         }
     }
 }

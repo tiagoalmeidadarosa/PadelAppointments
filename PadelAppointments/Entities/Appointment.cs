@@ -6,19 +6,11 @@ namespace PadelAppointments.Entities
     {
         public int Id { get; set; }
         public DateOnly Date { get; set; }
-        public TimeOnly Time { get; set; }
-
         public string? CustomerName { get; set; }
         public string? CustomerPhoneNumber { get; set; }
         public double Price { get; set; }
+        public bool HasRecurrence { get; set; }
 
-        [ForeignKey("Court")]
-        public int CourtId { get; set; }
-
-        [ForeignKey("Recurrence")]
-        public int? RecurrenceId { get; set; }
-
-        public virtual Court? Court { get; set; }
-        public virtual Recurrence? Recurrence { get; set; }
+        public ICollection<Schedule>? Schedules { get; set; }
     }
 }

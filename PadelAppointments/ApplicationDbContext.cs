@@ -2,7 +2,6 @@
 using Microsoft.EntityFrameworkCore;
 using PadelAppointments.Converters;
 using PadelAppointments.Entities;
-using PadelAppointments.Enums;
 using PadelAppointments.Models.Authentication;
 
 namespace PadelAppointments
@@ -13,7 +12,7 @@ namespace PadelAppointments
 
         public DbSet<Court> Courts { get; set; } = null!;
         public DbSet<Appointment> Appointments { get; set; } = null!;
-        public DbSet<Recurrence> Recurrences { get; set; } = null!;
+        public DbSet<Schedule> Schedules { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -48,6 +47,11 @@ namespace PadelAppointments
                         Name = "Quadra3",
                     }
                 );
+
+                builder
+                    .HasMany(c => c.Schedules)
+                    .WithOne(s => s.Court)
+                    .HasForeignKey(s => s.CourtId);
             });
 
             modelBuilder.Entity<Appointment>(builder =>
@@ -56,6 +60,10 @@ namespace PadelAppointments
 
                 builder.HasKey(a => new { a.Id });
                 builder.Property(a => a.Id).UseIdentityColumn();
+
+                // Date is a DateOnly property and date on database
+                builder.Property(a => a.Date)
+                    .HasConversion<DateOnlyConverter, DateOnlyComparer>();
 
                 builder
                     .Property(a => a.CustomerName)
@@ -72,14 +80,27 @@ namespace PadelAppointments
                     .IsRequired();
 
                 builder
-                    .HasOne(a => a.Court)
-                    .WithMany(c => c.Appointments)
-                    .HasForeignKey(a => a.CourtId);
+                    .HasMany(a => a.Schedules)
+                    .WithOne(s => s.Appointment)
+                    .HasForeignKey(s => s.AppointmentId);
+            });
+
+            modelBuilder.Entity<Schedule>(builder =>
+            {
+                builder.ToTable("Schedules");
+
+                builder.HasKey(a => new { a.Id });
+                builder.Property(a => a.Id).UseIdentityColumn();
 
                 builder
-                    .HasOne(a => a.Recurrence)
-                    .WithMany(r => r.Appointments)
-                    .HasForeignKey(a => a.RecurrenceId);
+                    .HasOne(s => s.Appointment)
+                    .WithMany(a => a.Schedules)
+                    .HasForeignKey(s => s.AppointmentId);
+
+                builder
+                    .HasOne(s => s.Court)
+                    .WithMany(a => a.Schedules)
+                    .HasForeignKey(s => s.CourtId);
 
                 // Date is a DateOnly property and date on database
                 builder.Property(a => a.Date)
@@ -90,27 +111,6 @@ namespace PadelAppointments
                     .HasConversion<TimeOnlyConverter, TimeOnlyComparer>();
 
                 builder.HasIndex(a => new { a.Date, a.Time, a.CourtId }).IsUnique();
-            });
-
-            modelBuilder.Entity<Recurrence>(builder =>
-            {
-                builder.ToTable("Recurrences");
-
-                builder.HasKey(r => new { r.Id });
-                builder.Property(r => r.Id).UseIdentityColumn();
-
-                builder
-                    .HasMany(r => r.Appointments)
-                    .WithOne(a => a.Recurrence)
-                    .HasForeignKey(a => a.RecurrenceId);
-
-                builder
-                    .Property(r => r.Type)
-                    .IsRequired()
-                    .HasColumnType("varchar(32)")
-                    .HasConversion(
-                        r => r.ToString(),
-                        r => (RecurrenceType)Enum.Parse(typeof(RecurrenceType), r));
             });
         }
     }

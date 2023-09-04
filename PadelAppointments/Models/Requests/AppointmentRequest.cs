@@ -8,9 +8,6 @@ namespace PadelAppointments.Models.Requests
         public DateOnly Date { get; set; }
 
         [Required]
-        public TimeOnly Time { get; set; }
-
-        [Required]
         public string? CustomerName { get; set; }
 
         [Required]
@@ -20,5 +17,8 @@ namespace PadelAppointments.Models.Requests
         public double Price { get; set; }
 
         public bool HasRecurrence { get; set; }
+
+        [Required]
+        public IEnumerable<ScheduleRequest> Schedules { get; set; } = Enumerable.Empty<ScheduleRequest>();
     }
 }
