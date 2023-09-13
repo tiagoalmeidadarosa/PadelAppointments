@@ -20,5 +20,8 @@ namespace PadelAppointments.Models.Requests
 
         [Required]
         public IEnumerable<ScheduleRequest> Schedules { get; set; } = Enumerable.Empty<ScheduleRequest>();
+
+        [Required]
+        public IEnumerable<ItemConsumedRequest> ItemsConsumed { get; set; } = Enumerable.Empty<ItemConsumedRequest>();
     }
 }

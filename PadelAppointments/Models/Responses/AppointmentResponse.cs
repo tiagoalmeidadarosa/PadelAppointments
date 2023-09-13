@@ -8,5 +8,6 @@
         public string? CustomerPhoneNumber { get; set; }
         public double Price { get; set; }
         public bool HasRecurrence { get; set; }
+        public IEnumerable<ItemConsumedResponse> ItemsConsumed { get; set; } = Enumerable.Empty<ItemConsumedResponse>();
     }
 }

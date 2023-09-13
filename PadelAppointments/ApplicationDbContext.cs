@@ -13,6 +13,7 @@ namespace PadelAppointments
         public DbSet<Court> Courts { get; set; } = null!;
         public DbSet<Appointment> Appointments { get; set; } = null!;
         public DbSet<Schedule> Schedules { get; set; } = null!;
+        public DbSet<ItemConsumed> ItemsConsumed { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -89,8 +90,8 @@ namespace PadelAppointments
             {
                 builder.ToTable("Schedules");
 
-                builder.HasKey(a => new { a.Id });
-                builder.Property(a => a.Id).UseIdentityColumn();
+                builder.HasKey(s => new { s.Id });
+                builder.Property(s => s.Id).UseIdentityColumn();
 
                 builder
                     .HasOne(s => s.Appointment)
@@ -103,14 +104,32 @@ namespace PadelAppointments
                     .HasForeignKey(s => s.CourtId);
 
                 // Date is a DateOnly property and date on database
-                builder.Property(a => a.Date)
+                builder.Property(s => s.Date)
                     .HasConversion<DateOnlyConverter, DateOnlyComparer>();
 
                 // Time is a TimeOnly property and time on database
-                builder.Property(a => a.Time)
+                builder.Property(s => s.Time)
                     .HasConversion<TimeOnlyConverter, TimeOnlyComparer>();
 
-                builder.HasIndex(a => new { a.Date, a.Time, a.CourtId }).IsUnique();
+                builder.HasIndex(s => new { s.Date, s.Time, s.CourtId }).IsUnique();
+            });
+
+            modelBuilder.Entity<ItemConsumed>(builder =>
+            {
+                builder.ToTable("ItemsConsumed");
+
+                builder.HasKey(i => new { i.Id });
+                builder.Property(i => i.Id).UseIdentityColumn();
+
+                builder
+                    .Property(a => a.Description)
+                    .IsRequired()
+                    .HasColumnType("nvarchar(256)");
+
+                builder
+                    .HasOne(i => i.Appointment)
+                    .WithMany(a => a.ItemsConsumed)
+                    .HasForeignKey(i => i.AppointmentId);
             });
         }
     }

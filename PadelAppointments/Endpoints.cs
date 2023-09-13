@@ -159,6 +159,7 @@ namespace PadelAppointments
                 return await db.Schedules
                     .AsNoTracking()
                     .Include(s => s.Appointment)
+                    .ThenInclude(a => a!.ItemsConsumed)
                     .Where(s => s.CourtId == courtId && s.Date == date)
                     .Select(s => new ScheduleResponse()
                     {
@@ -174,6 +175,13 @@ namespace PadelAppointments
                             CustomerPhoneNumber = s.Appointment.CustomerPhoneNumber,
                             Price = s.Appointment.Price,
                             HasRecurrence = s.Appointment.HasRecurrence,
+                            ItemsConsumed = s.Appointment.ItemsConsumed!.Select(i => new ItemConsumedResponse()
+                            {
+                                Id = i.Id,
+                                Quantity = i.Quantity,
+                                Description = i.Description,
+                                Price = i.Price,
+                            }),
                         },
                     })
                     .ToListAsync();
@@ -201,6 +209,12 @@ namespace PadelAppointments
                         Date = s.Date,
                         Time = s.Time,
                         CourtId = s.CourtId,
+                    }).ToList(),
+                    ItemsConsumed = request.ItemsConsumed.Select(i => new ItemConsumed()
+                    {
+                        Quantity = i.Quantity,
+                        Description = i.Description,
+                        Price = i.Price,
                     }).ToList(),
                 };
 
@@ -230,11 +244,7 @@ namespace PadelAppointments
                 await db.Appointments.AddAsync(appointment);
                 await db.SaveChangesAsync();
 
-                // Fix cycle reference error
-                foreach (var schedule in appointment.Schedules)
-                {
-                    schedule.Appointment = null;
-                }
+                FixAppointmentCycleReferenceError(appointment);
 
                 return Results.Created($"/{appointment.Id}", appointment);
             })
@@ -243,6 +253,7 @@ namespace PadelAppointments
             group.MapPut("/{appointmentId}", async (ApplicationDbContext db, int appointmentId, UpdateAppointmentRequest request) =>
             {
                 var appointment = await db.Appointments
+                    .Include(a => a.ItemsConsumed)
                     .FirstOrDefaultAsync(a => a.Id == appointmentId);
 
                 if (appointment == null)
@@ -253,6 +264,21 @@ namespace PadelAppointments
                 appointment.CustomerName = request.CustomerName;
                 appointment.CustomerPhoneNumber = request.CustomerPhoneNumber;
                 appointment.Price = request.Price;
+
+                var itemsConsumed = request.ItemsConsumed
+                    .Select(itemConsumed => new ItemConsumed()
+                    {
+                        Quantity = itemConsumed.Quantity,
+                        Description = itemConsumed.Description,
+                        Price = itemConsumed.Price,
+                    })
+                    .ToList();
+
+                var itemsConsumedAreEqual = Enumerable.SequenceEqual(appointment.ItemsConsumed!, itemsConsumed, new ItemConsumed());
+                if (!itemsConsumedAreEqual)
+                {
+                    appointment.ItemsConsumed = itemsConsumed;
+                }
 
                 await db.SaveChangesAsync();
 
@@ -296,6 +322,19 @@ namespace PadelAppointments
             .Produces(StatusCodes.Status404NotFound);
 
             return group;
+        }
+
+        private static void FixAppointmentCycleReferenceError(Appointment appointment)
+        {
+            foreach (var schedule in appointment.Schedules!)
+            {
+                schedule.Appointment = null;
+            }
+
+            foreach (var itemConsumed in appointment.ItemsConsumed!)
+            {
+                itemConsumed.Appointment = null;
+            }
         }
     }
 }

@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-
-namespace PadelAppointments.Entities
+﻿namespace PadelAppointments.Entities
 {
     public class Appointment
     {
@@ -12,5 +10,6 @@ namespace PadelAppointments.Entities
         public bool HasRecurrence { get; set; }
 
         public ICollection<Schedule>? Schedules { get; set; }
+        public ICollection<ItemConsumed>? ItemsConsumed { get; set; }
     }
 }
