@@ -12,5 +12,8 @@ namespace PadelAppointments.Models.Requests
 
         [Required]
         public double Price { get; set; }
+
+        [Required]
+        public bool Paid { get; set; }
     }
 }

@@ -8,15 +8,18 @@ namespace PadelAppointments.Entities
         public int Quantity { get; set; }
         public string Description { get; set; } = default!;
         public double Price { get; set; }
+        public bool Paid { get; set; }
 
-        [ForeignKey("Appointment")]
-        public int AppointmentId { get; set; }
-
-        public virtual Appointment? Appointment { get; set; }
+        [ForeignKey("Check")]
+        public int CheckId { get; set; }
+        public virtual Check Check { get; set; } = default!;
 
         public bool Equals(ItemConsumed? x, ItemConsumed? y)
         {
-            return x?.Quantity == y?.Quantity && x?.Description == y?.Description && x?.Price == y?.Price;
+            return x?.Quantity == y?.Quantity && 
+                x?.Description == y?.Description && 
+                x?.Price == y?.Price &&
+                x?.Paid == y?.Paid;
         }
 
         public int GetHashCode(ItemConsumed obj)

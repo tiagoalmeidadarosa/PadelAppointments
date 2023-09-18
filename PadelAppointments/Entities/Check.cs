@@ -2,19 +2,17 @@
 
 namespace PadelAppointments.Entities
 {
-    public class Schedule
+    public class Check
     {
         public int Id { get; set; }
         public DateOnly Date { get; set; }
-        public TimeOnly Time { get; set; }
+        public int PriceDividedBy { get; set; }
+        public int PricePaidFor { get; set; }
 
         [ForeignKey("Appointment")]
         public int AppointmentId { get; set; }
-
-        [ForeignKey("Court")]
-        public int CourtId { get; set; }
-
         public virtual Appointment Appointment { get; set; } = default!;
-        public virtual Court Court { get; set; } = default!;
+
+        public ICollection<ItemConsumed> ItemsConsumed { get; set; } = new List<ItemConsumed>();
     }
 }

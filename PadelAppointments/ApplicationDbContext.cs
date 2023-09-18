@@ -14,6 +14,7 @@ namespace PadelAppointments
         public DbSet<Appointment> Appointments { get; set; } = null!;
         public DbSet<Schedule> Schedules { get; set; } = null!;
         public DbSet<ItemConsumed> ItemsConsumed { get; set; } = null!;
+        public DbSet<Check> Checks { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -84,6 +85,11 @@ namespace PadelAppointments
                     .HasMany(a => a.Schedules)
                     .WithOne(s => s.Appointment)
                     .HasForeignKey(s => s.AppointmentId);
+
+                builder
+                    .HasMany(a => a.Checks)
+                    .WithOne(c => c.Appointment)
+                    .HasForeignKey(c => c.AppointmentId);
             });
 
             modelBuilder.Entity<Schedule>(builder =>
@@ -127,9 +133,33 @@ namespace PadelAppointments
                     .HasColumnType("nvarchar(256)");
 
                 builder
-                    .HasOne(i => i.Appointment)
+                    .HasOne(i => i.Check)
                     .WithMany(a => a.ItemsConsumed)
+                    .HasForeignKey(i => i.CheckId);
+            });
+
+            modelBuilder.Entity<Check>(builder =>
+            {
+                builder.ToTable("Checks");
+
+                builder.HasKey(c => new { c.Id });
+                builder.Property(c => c.Id).UseIdentityColumn();
+
+                // Date is a DateOnly property and date on database
+                builder.Property(c => c.Date)
+                    .HasConversion<DateOnlyConverter, DateOnlyComparer>();
+
+                builder
+                    .HasOne(c => c.Appointment)
+                    .WithMany(a => a.Checks)
                     .HasForeignKey(i => i.AppointmentId);
+
+                builder
+                    .HasMany(c => c.ItemsConsumed)
+                    .WithOne(i => i.Check)
+                    .HasForeignKey(c => c.CheckId);
+
+                builder.HasIndex(s => new { s.Date, s.AppointmentId }).IsUnique();
             });
         }
     }

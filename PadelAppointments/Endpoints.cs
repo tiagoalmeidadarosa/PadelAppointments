@@ -26,6 +26,10 @@ namespace PadelAppointments
             app.MapGroup("appointments")
                 .MapAppointmentsGroup()
                 .RequireAuthorization();
+
+            app.MapGroup("checks")
+                .MapChecksGroup()
+                .RequireAuthorization();
         }
 
         public static RouteGroupBuilder MapAuthGroup(this RouteGroupBuilder group)
@@ -159,7 +163,8 @@ namespace PadelAppointments
                 return await db.Schedules
                     .AsNoTracking()
                     .Include(s => s.Appointment)
-                    .ThenInclude(a => a!.ItemsConsumed)
+                    .ThenInclude(a => a.Checks)
+                    .ThenInclude(c => c.ItemsConsumed)
                     .Where(s => s.CourtId == courtId && s.Date == date)
                     .Select(s => new ScheduleResponse()
                     {
@@ -169,19 +174,31 @@ namespace PadelAppointments
                         CourtId = s.CourtId,
                         Appointment = new AppointmentResponse()
                         {
-                            Id = s.Appointment!.Id,
+                            Id = s.Appointment.Id,
                             Date = s.Appointment.Date,
                             CustomerName = s.Appointment.CustomerName,
                             CustomerPhoneNumber = s.Appointment.CustomerPhoneNumber,
                             Price = s.Appointment.Price,
                             HasRecurrence = s.Appointment.HasRecurrence,
-                            ItemsConsumed = s.Appointment.ItemsConsumed!.Select(i => new ItemConsumedResponse()
-                            {
-                                Id = i.Id,
-                                Quantity = i.Quantity,
-                                Description = i.Description,
-                                Price = i.Price,
-                            }),
+                            Check = s.Appointment.Checks
+                                .Select(c => new CheckResponse()
+                                {
+                                    Id = c.Id,
+                                    Date = c.Date,
+                                    PriceDividedBy = c.PriceDividedBy,
+                                    PricePaidFor = c.PricePaidFor,
+                                    ItemsConsumed = c.ItemsConsumed
+                                        .Select(i => new ItemConsumedResponse()
+                                        {
+                                            Id = i.Id,
+                                            Quantity = i.Quantity,
+                                            Description = i.Description,
+                                            Price = i.Price,
+                                            Paid = i.Paid,
+                                        })
+                                        .ToList(),
+                                })
+                                .FirstOrDefault(c => c.Date == s.Date),
                         },
                     })
                     .ToListAsync();
@@ -195,6 +212,8 @@ namespace PadelAppointments
         {
             group.MapPost("/", async (ApplicationDbContext db, AppointmentRequest request) =>
             {
+                const int DEFAULT_PRICE_DIVIDED_BY = 4;
+                const int DEFAULT_PRICE_PAID_FOR = 0;
                 const int NUMBER_OF_DAYS_IN_A_WEEK = 7;
 
                 var appointment = new Appointment()
@@ -209,12 +228,6 @@ namespace PadelAppointments
                         Date = s.Date,
                         Time = s.Time,
                         CourtId = s.CourtId,
-                    }).ToList(),
-                    ItemsConsumed = request.ItemsConsumed.Select(i => new ItemConsumed()
-                    {
-                        Quantity = i.Quantity,
-                        Description = i.Description,
-                        Price = i.Price,
                     }).ToList(),
                 };
 
@@ -241,6 +254,13 @@ namespace PadelAppointments
                     }
                 }
 
+                appointment.Checks = appointment.Schedules.GroupBy(s => s.Date).Select(g => new Check()
+                {
+                    Date = g.Key,
+                    PriceDividedBy = DEFAULT_PRICE_DIVIDED_BY,
+                    PricePaidFor = DEFAULT_PRICE_PAID_FOR,
+                }).ToList();
+
                 await db.Appointments.AddAsync(appointment);
                 await db.SaveChangesAsync();
 
@@ -253,7 +273,6 @@ namespace PadelAppointments
             group.MapPut("/{appointmentId}", async (ApplicationDbContext db, int appointmentId, UpdateAppointmentRequest request) =>
             {
                 var appointment = await db.Appointments
-                    .Include(a => a.ItemsConsumed)
                     .FirstOrDefaultAsync(a => a.Id == appointmentId);
 
                 if (appointment == null)
@@ -264,21 +283,6 @@ namespace PadelAppointments
                 appointment.CustomerName = request.CustomerName;
                 appointment.CustomerPhoneNumber = request.CustomerPhoneNumber;
                 appointment.Price = request.Price;
-
-                var itemsConsumed = request.ItemsConsumed
-                    .Select(itemConsumed => new ItemConsumed()
-                    {
-                        Quantity = itemConsumed.Quantity,
-                        Description = itemConsumed.Description,
-                        Price = itemConsumed.Price,
-                    })
-                    .ToList();
-
-                var itemsConsumedAreEqual = Enumerable.SequenceEqual(appointment.ItemsConsumed!, itemsConsumed, new ItemConsumed());
-                if (!itemsConsumedAreEqual)
-                {
-                    appointment.ItemsConsumed = itemsConsumed;
-                }
 
                 await db.SaveChangesAsync();
 
@@ -291,7 +295,7 @@ namespace PadelAppointments
                 [FromRoute] int appointmentId, [FromRoute] int scheduleId, [FromQuery] bool removeRecurrence) =>
             {
                 var appointment = await db.Appointments
-                    .Include(s => s.Schedules)
+                    .Include(a => a.Schedules)
                     .FirstOrDefaultAsync(a => a.Id == appointmentId);
 
                 if (appointment == null)
@@ -307,7 +311,7 @@ namespace PadelAppointments
                     return Results.NotFound();
                 }
 
-                var schedulesToDelete = appointment.Schedules!
+                var schedulesToDelete = appointment.Schedules
                     .Where(s => removeRecurrence
                         ? s.Date >= schedule.Date
                         : s.Date == schedule.Date)
@@ -319,6 +323,48 @@ namespace PadelAppointments
                 return Results.Ok();
             })
             .Produces(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status404NotFound);            
+
+            return group;
+        }
+
+        public static RouteGroupBuilder MapChecksGroup(this RouteGroupBuilder group)
+        {
+            group.MapPut("/{checkId}", async (ApplicationDbContext db, int checkId, CheckRequest request) =>
+            {
+                var check = await db.Checks
+                    .Include(c => c.ItemsConsumed)
+                    .FirstOrDefaultAsync(a => a.Id == checkId);
+
+                if (check == null)
+                {
+                    return Results.NotFound();
+                }
+
+                check.PriceDividedBy = request.PriceDividedBy;
+                check.PricePaidFor = request.PricePaidFor;
+
+                var itemsConsumed = request.ItemsConsumed
+                    .Select(itemConsumed => new ItemConsumed()
+                    {
+                        Quantity = itemConsumed.Quantity,
+                        Description = itemConsumed.Description,
+                        Price = itemConsumed.Price,
+                        Paid = itemConsumed.Paid,
+                    })
+                    .ToList();
+
+                var itemsConsumedAreEqual = Enumerable.SequenceEqual(check.ItemsConsumed, itemsConsumed, new ItemConsumed());
+                if (!itemsConsumedAreEqual)
+                {
+                    check.ItemsConsumed = itemsConsumed;
+                }
+
+                await db.SaveChangesAsync();
+
+                return Results.NoContent();
+            })
+            .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status404NotFound);
 
             return group;
@@ -326,14 +372,14 @@ namespace PadelAppointments
 
         private static void FixAppointmentCycleReferenceError(Appointment appointment)
         {
-            foreach (var schedule in appointment.Schedules!)
+            foreach (var schedule in appointment.Schedules)
             {
-                schedule.Appointment = null;
+                schedule.Appointment = default!;
             }
 
-            foreach (var itemConsumed in appointment.ItemsConsumed!)
+            foreach (var check in appointment.Checks)
             {
-                itemConsumed.Appointment = null;
+                check.Appointment = default!;
             }
         }
     }

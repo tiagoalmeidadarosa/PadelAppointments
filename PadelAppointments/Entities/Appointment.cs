@@ -9,7 +9,7 @@
         public double Price { get; set; }
         public bool HasRecurrence { get; set; }
 
-        public ICollection<Schedule>? Schedules { get; set; }
-        public ICollection<ItemConsumed>? ItemsConsumed { get; set; }
+        public ICollection<Schedule> Schedules { get; set; } = new List<Schedule>();
+        public ICollection<Check> Checks { get; set; } = new List<Check>();
     }
 }
