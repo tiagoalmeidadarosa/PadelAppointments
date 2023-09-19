@@ -35,7 +35,7 @@ namespace PadelAppointments.Endpoints
                     var token = new JwtSecurityToken(
                         issuer: configuration["JWT:ValidIssuer"],
                         audience: configuration["JWT:ValidAudience"],
-                        expires: DateTime.Now.AddHours(3),
+                        expires: DateTime.Now.AddDays(1),
                         claims: authClaims,
                         signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
                     );
