@@ -35,7 +35,32 @@ namespace PadelAppointments.Endpoints
                 var itemsConsumedAreEqual = Enumerable.SequenceEqual(check.ItemsConsumed, itemsConsumed, new ItemConsumed());
                 if (!itemsConsumedAreEqual)
                 {
-                    check.ItemsConsumed = itemsConsumed;
+                    //remove deleted rows
+                    check.ItemsConsumed = check.ItemsConsumed.Where(i => request.ItemsConsumed.Any(r => r.Id == i.Id)).ToList();
+
+                    foreach (var item in request.ItemsConsumed)
+                    {
+                        var itemConsumedFromCheck = check.ItemsConsumed.FirstOrDefault(i => i.Id == item.Id);
+                        if (itemConsumedFromCheck is null)
+                        {
+                            // add
+                            check.ItemsConsumed.Add(new ItemConsumed()
+                            {
+                                Quantity = item.Quantity,
+                                Description = item.Description,
+                                Price = item.Price,
+                                Paid = item.Paid,
+                            });
+                        }
+                        else
+                        {
+                            // update
+                            itemConsumedFromCheck.Quantity = item.Quantity;
+                            itemConsumedFromCheck.Description = item.Description;
+                            itemConsumedFromCheck.Price = item.Price;
+                            itemConsumedFromCheck.Paid = item.Paid;
+                        }
+                    }
                 }
 
                 await db.SaveChangesAsync();

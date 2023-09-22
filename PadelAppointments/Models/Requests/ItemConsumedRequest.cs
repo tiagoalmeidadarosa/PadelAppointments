@@ -4,6 +4,8 @@ namespace PadelAppointments.Models.Requests
 {
     public class ItemConsumedRequest
     {
+        public int Id { get; set; }
+
         [Required]
         public int Quantity { get; set; }
 
