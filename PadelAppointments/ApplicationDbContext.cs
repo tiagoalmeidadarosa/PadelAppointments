@@ -6,7 +6,7 @@ using PadelAppointments.Models.Authentication;
 
 namespace PadelAppointments
 {
-    class ApplicationDbContext : IdentityDbContext<ApplicationUser>
+    public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
         public ApplicationDbContext(DbContextOptions options) : base(options) { }
 

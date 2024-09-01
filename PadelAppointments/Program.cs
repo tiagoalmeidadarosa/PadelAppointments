@@ -88,6 +88,8 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.AddControllers();
+
 var app = builder.Build();
 
 //if (app.Environment.IsDevelopment())
@@ -105,6 +107,6 @@ app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapEndpoints();
+app.MapControllers();
 
-app.Run();
+await app.RunAsync();
