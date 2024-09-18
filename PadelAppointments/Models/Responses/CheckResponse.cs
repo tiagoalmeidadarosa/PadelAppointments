@@ -7,6 +7,6 @@
         public int PriceDividedBy { get; set; }
         public int PricePaidFor { get; set; }
 
-        public IEnumerable<ItemConsumedResponse> ItemsConsumed { get; set; } = Enumerable.Empty<ItemConsumedResponse>();
+        public IEnumerable<ItemConsumedResponse> ItemsConsumed { get; set; } = [];
     }
 }

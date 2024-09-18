@@ -13,6 +13,6 @@ namespace PadelAppointments.Entities
         public int AppointmentId { get; set; }
         public virtual Appointment Appointment { get; set; } = default!;
 
-        public ICollection<ItemConsumed> ItemsConsumed { get; set; } = new List<ItemConsumed>();
+        public ICollection<ItemConsumed> ItemsConsumed { get; set; } = [];
     }
 }

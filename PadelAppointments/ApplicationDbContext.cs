@@ -6,21 +6,19 @@ using PadelAppointments.Models.Authentication;
 
 namespace PadelAppointments
 {
-    public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
+    public class ApplicationDbContext(DbContextOptions options) : IdentityDbContext<ApplicationUser>(options)
     {
-        public ApplicationDbContext(DbContextOptions options) : base(options) { }
-
         public DbSet<Court> Courts { get; set; } = null!;
         public DbSet<Appointment> Appointments { get; set; } = null!;
         public DbSet<Schedule> Schedules { get; set; } = null!;
         public DbSet<ItemConsumed> ItemsConsumed { get; set; } = null!;
         public DbSet<Check> Checks { get; set; } = null!;
 
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        protected override void OnModelCreating(ModelBuilder builder)
         {
-            base.OnModelCreating(modelBuilder);
+            base.OnModelCreating(builder);
 
-            modelBuilder.Entity<Court>(builder =>
+            builder.Entity<Court>(builder =>
             {
                 builder.ToTable("Courts");
 
@@ -56,7 +54,7 @@ namespace PadelAppointments
                     .HasForeignKey(s => s.CourtId);
             });
 
-            modelBuilder.Entity<Appointment>(builder =>
+            builder.Entity<Appointment>(builder =>
             {
                 builder.ToTable("Appointments");
 
@@ -92,7 +90,7 @@ namespace PadelAppointments
                     .HasForeignKey(c => c.AppointmentId);
             });
 
-            modelBuilder.Entity<Schedule>(builder =>
+            builder.Entity<Schedule>(builder =>
             {
                 builder.ToTable("Schedules");
 
@@ -120,7 +118,7 @@ namespace PadelAppointments
                 builder.HasIndex(s => new { s.Date, s.Time, s.CourtId }).IsUnique();
             });
 
-            modelBuilder.Entity<ItemConsumed>(builder =>
+            builder.Entity<ItemConsumed>(builder =>
             {
                 builder.ToTable("ItemsConsumed");
 
@@ -138,7 +136,7 @@ namespace PadelAppointments
                     .HasForeignKey(i => i.CheckId);
             });
 
-            modelBuilder.Entity<Check>(builder =>
+            builder.Entity<Check>(builder =>
             {
                 builder.ToTable("Checks");
 
