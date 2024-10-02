@@ -6,6 +6,7 @@ using PadelAppointments.Models.Authentication;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using static PadelAppointments.Constants;
 
 namespace PadelAppointments.Controllers
 {
@@ -16,12 +17,18 @@ namespace PadelAppointments.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly IConfiguration _configuration;
+        private readonly ApplicationDbContext _dbContext;
 
-        public AuthController(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager, IConfiguration configuration)
+        public AuthController(
+            UserManager<ApplicationUser> userManager, 
+            RoleManager<IdentityRole> roleManager, 
+            IConfiguration configuration,
+            ApplicationDbContext dbContext)
         {
             _userManager = userManager;
             _roleManager = roleManager;
             _configuration = configuration;
+            _dbContext = dbContext;
         }
 
         [HttpPost("login")]
@@ -42,6 +49,7 @@ namespace PadelAppointments.Controllers
             {
                 new(ClaimTypes.Name, user.UserName!),
                 new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+                new(CustomClaimNames.OrganizationId, user.OrganizationId.ToString()),
             };
 
             foreach (var userRole in userRoles)
@@ -64,9 +72,16 @@ namespace PadelAppointments.Controllers
         [HttpPost("register")]
         [Authorize(Roles = UserRoles.Admin)]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Register([FromBody] RegisterModel model)
         {
+            var organization = await _dbContext.Organizations.FindAsync(model.OrganizationId);
+            if (organization is null)
+            {
+                return BadRequest("Organization not found");
+            }
+
             var userExists = await _userManager.FindByNameAsync(model.Username);
             if (userExists != null)
             {
@@ -77,7 +92,8 @@ namespace PadelAppointments.Controllers
             {
                 Email = model.Email,
                 SecurityStamp = Guid.NewGuid().ToString(),
-                UserName = model.Username
+                UserName = model.Username,
+                OrganizationId = organization.Id,
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);
@@ -93,9 +109,10 @@ namespace PadelAppointments.Controllers
 
         [HttpPost("register/admin")]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [AllowAnonymous]
-        public async Task<IActionResult> RegisterAdmin([FromBody] RegisterModel model)
+        public async Task<IActionResult> RegisterAdmin([FromBody] RegisterAdminModel model)
         {
             var userExists = await _userManager.FindByNameAsync(model.Username);
             if (userExists != null)
@@ -107,7 +124,7 @@ namespace PadelAppointments.Controllers
             {
                 Email = model.Email,
                 SecurityStamp = Guid.NewGuid().ToString(),
-                UserName = model.Username
+                UserName = model.Username,
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);
@@ -117,7 +134,6 @@ namespace PadelAppointments.Controllers
             }
 
             await AddAdminRole(user);
-            await AddUserRole(user);
 
             return Ok("User created successfully!");
         }

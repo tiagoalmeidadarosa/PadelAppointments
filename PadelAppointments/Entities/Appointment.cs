@@ -9,6 +9,9 @@
         public double Price { get; set; }
         public bool HasRecurrence { get; set; }
 
+        public int AgendaId { get; set; }
+        public virtual Agenda Agenda { get; set; } = default!;
+
         public ICollection<Schedule> Schedules { get; set; } = [];
         public ICollection<Check> Checks { get; set; } = [];
     }

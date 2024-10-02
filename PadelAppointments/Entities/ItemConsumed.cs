@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-
-namespace PadelAppointments.Entities
+﻿namespace PadelAppointments.Entities
 {
     public class ItemConsumed : IEqualityComparer<ItemConsumed>
     {
@@ -10,7 +8,6 @@ namespace PadelAppointments.Entities
         public double Price { get; set; }
         public bool Paid { get; set; }
 
-        [ForeignKey("Check")]
         public int CheckId { get; set; }
         public virtual Check Check { get; set; } = default!;
 

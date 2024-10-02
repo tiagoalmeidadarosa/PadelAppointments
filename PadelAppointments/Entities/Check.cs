@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-
-namespace PadelAppointments.Entities
+﻿namespace PadelAppointments.Entities
 {
     public class Check
     {
@@ -9,7 +7,6 @@ namespace PadelAppointments.Entities
         public int PriceDividedBy { get; set; }
         public int PricePaidFor { get; set; }
 
-        [ForeignKey("Appointment")]
         public int AppointmentId { get; set; }
         public virtual Appointment Appointment { get; set; } = default!;
 

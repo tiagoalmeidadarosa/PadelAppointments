@@ -34,11 +34,11 @@ namespace PadelAppointments.Controllers
                 CustomerPhoneNumber = request.CustomerPhoneNumber,
                 Price = request.Price,
                 HasRecurrence = request.HasRecurrence,
+                AgendaId = request.AgendaId,
                 Schedules = request.Schedules.Select(s => new Schedule()
                 {
                     Date = s.Date,
                     Time = s.Time,
-                    CourtId = s.CourtId,
                 }).ToList(),
             };
 
@@ -59,7 +59,6 @@ namespace PadelAppointments.Controllers
                         {
                             Date = request.Date,
                             Time = schedule.Time,
-                            CourtId = schedule.CourtId,
                         });
                     }
                 }
