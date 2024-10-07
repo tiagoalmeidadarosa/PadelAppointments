@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using PadelAppointments.Entities;
 using PadelAppointments.Models.Authentication;
 using PadelAppointments.Models.Requests;
+using PadelAppointments.Services;
 
 namespace PadelAppointments.Controllers
 {
@@ -13,10 +14,12 @@ namespace PadelAppointments.Controllers
     public class AppointmentsController : ControllerBase
     {
         private readonly ApplicationDbContext _dbContext;
+        private readonly UserResolver _userResolver;
 
-        public AppointmentsController(ApplicationDbContext dbContext)
+        public AppointmentsController(ApplicationDbContext dbContext, UserResolver userResolver)
         {
             _dbContext = dbContext;
+            _userResolver = userResolver;
         }
 
         [HttpPost]
@@ -27,6 +30,14 @@ namespace PadelAppointments.Controllers
             const int DEFAULT_PRICE_PAID_FOR = 0;
             const int NUMBER_OF_DAYS_IN_A_WEEK = 7;
 
+            var agenda = await _dbContext.Agendas
+                .FirstOrDefaultAsync(a => a.Id == request.AgendaId && a.OrganizationId == _userResolver.OrganizationId);
+
+            if (agenda is null)
+            {
+                return NotFound("No agenda found");
+            }
+
             var appointment = new Appointment()
             {
                 Date = request.Date,
@@ -34,7 +45,7 @@ namespace PadelAppointments.Controllers
                 CustomerPhoneNumber = request.CustomerPhoneNumber,
                 Price = request.Price,
                 HasRecurrence = request.HasRecurrence,
-                AgendaId = request.AgendaId,
+                AgendaId = agenda.Id,
                 Schedules = request.Schedules.Select(s => new Schedule()
                 {
                     Date = s.Date,
@@ -83,7 +94,8 @@ namespace PadelAppointments.Controllers
         public async Task<IActionResult> Edit([FromRoute] int appointmentId, [FromBody] UpdateAppointmentRequest request)
         {
             var appointment = await _dbContext.Appointments
-                .FirstOrDefaultAsync(a => a.Id == appointmentId);
+                .Include(x => x.Agenda)
+                .FirstOrDefaultAsync(x => x.Id == appointmentId && x.Agenda.OrganizationId == _userResolver.OrganizationId);
 
             if (appointment == null)
             {
@@ -105,8 +117,11 @@ namespace PadelAppointments.Controllers
         public async Task<IActionResult> Delete([FromRoute] int appointmentId, [FromRoute] int scheduleId, [FromQuery] bool removeRecurrence)
         {
             var appointment = await _dbContext.Appointments
-                .Include(a => a.Schedules)
-                .FirstOrDefaultAsync(a => a.Id == appointmentId);
+                .Include(x => x.Schedules)
+                .Include(x => x.Agenda)
+                .Include(x => x.Checks)
+                .ThenInclude(x => x.ItemsConsumed)
+                .FirstOrDefaultAsync(x => x.Id == appointmentId && x.Agenda.OrganizationId == _userResolver.OrganizationId);
 
             if (appointment == null)
             {
@@ -127,6 +142,12 @@ namespace PadelAppointments.Controllers
 
             _dbContext.Schedules.RemoveRange(schedulesToDelete);
             await _dbContext.SaveChangesAsync();
+
+            if (appointment.Schedules.Count == 0)
+            {
+                _dbContext.Appointments.Remove(appointment);
+                await _dbContext.SaveChangesAsync();
+            }
 
             return NoContent();
         }

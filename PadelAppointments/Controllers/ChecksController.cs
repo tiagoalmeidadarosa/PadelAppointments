@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using PadelAppointments.Entities;
 using PadelAppointments.Models.Authentication;
 using PadelAppointments.Models.Requests;
+using PadelAppointments.Services;
 
 namespace PadelAppointments.Controllers
 {
@@ -13,10 +14,12 @@ namespace PadelAppointments.Controllers
     public class ChecksController : ControllerBase
     {
         private readonly ApplicationDbContext _dbContext;
+        private readonly UserResolver _userResolver;
 
-        public ChecksController(ApplicationDbContext dbContext)
+        public ChecksController(ApplicationDbContext dbContext, UserResolver userResolver)
         {
             _dbContext = dbContext;
+            _userResolver = userResolver;
         }
 
         [HttpPut("{checkId}")]
@@ -25,8 +28,10 @@ namespace PadelAppointments.Controllers
         public async Task<IActionResult> Edit([FromRoute] int checkId, [FromBody] CheckRequest request)
         {
             var check = await _dbContext.Checks
-                .Include(c => c.ItemsConsumed)
-                .FirstOrDefaultAsync(a => a.Id == checkId);
+                .Include(x => x.ItemsConsumed)
+                .Include(x => x.Appointment)
+                .ThenInclude(x => x.Agenda)
+                .FirstOrDefaultAsync(x => x.Id == checkId && x.Appointment.Agenda.OrganizationId == _userResolver.OrganizationId);
 
             if (check == null)
             {

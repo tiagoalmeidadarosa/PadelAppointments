@@ -139,13 +139,33 @@ namespace PadelAppointments.Controllers
             var agenda = await _dbContext.Agendas
                 .FirstOrDefaultAsync(a => a.Id == agendaId && a.OrganizationId == _userResolver.OrganizationId);
 
-            if (agenda == null)
+            if (agenda is null)
             {
                 return NotFound("No agenda found");
             }
 
             agenda.Name = request.Name;
 
+            await _dbContext.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        [HttpDelete("{agendaId}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> Delete([FromRoute] int agendaId)
+        {
+            var agenda = await _dbContext.Agendas
+                .Include(x => x.Appointments)
+                .FirstOrDefaultAsync(x => x.Id == agendaId && x.OrganizationId == _userResolver.OrganizationId);
+
+            if (agenda is null)
+            {
+                return NotFound("No agenda found");
+            }
+
+            _dbContext.Agendas.Remove(agenda);
             await _dbContext.SaveChangesAsync();
 
             return NoContent();
