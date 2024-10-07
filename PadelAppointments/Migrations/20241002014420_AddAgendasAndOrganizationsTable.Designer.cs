@@ -169,8 +169,8 @@ namespace PadelAppointments.Migrations
                     b.Property<TimeSpan>("EndsAt")
                         .HasColumnType("time");
 
-                    b.Property<TimeSpan>("Interval")
-                        .HasColumnType("time");
+                    b.Property<int>("Interval")
+                        .HasColumnType("int");
 
                     b.Property<string>("Name")
                         .IsRequired()

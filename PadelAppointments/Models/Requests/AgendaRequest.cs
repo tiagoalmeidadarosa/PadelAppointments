@@ -14,6 +14,6 @@ namespace PadelAppointments.Models.Requests
         public TimeOnly EndsAt { get; set; }
 
         [Required]
-        public TimeOnly Interval { get; set; }
+        public int Interval { get; set; }
     }
 }

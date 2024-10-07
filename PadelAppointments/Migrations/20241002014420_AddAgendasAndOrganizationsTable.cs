@@ -79,7 +79,7 @@ namespace PadelAppointments.Migrations
                     Name = table.Column<string>(type: "nvarchar(128)", nullable: false),
                     StartsAt = table.Column<TimeSpan>(type: "time", nullable: false),
                     EndsAt = table.Column<TimeSpan>(type: "time", nullable: false),
-                    Interval = table.Column<TimeSpan>(type: "time", nullable: false),
+                    Interval = table.Column<int>(type: "int", nullable: false),
                     OrganizationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
                 },
                 constraints: table =>

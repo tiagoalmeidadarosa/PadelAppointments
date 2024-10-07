@@ -26,10 +26,6 @@ namespace PadelAppointments.Entities.Configurations
             builder.Property(a => a.EndsAt)
                 .HasConversion<TimeOnlyConverter, TimeOnlyComparer>();
 
-            // Time is a TimeOnly property and time on database
-            builder.Property(a => a.Interval)
-                .HasConversion<TimeOnlyConverter, TimeOnlyComparer>();
-
             builder
                 .HasMany(ag => ag.Appointments)
                 .WithOne(ap => ap.Agenda)
