@@ -145,6 +145,9 @@ namespace PadelAppointments.Controllers
             }
 
             agenda.Name = request.Name;
+            agenda.StartsAt = request.StartsAt;
+            agenda.EndsAt = request.EndsAt;
+            agenda.Interval = request.Interval;
 
             await _dbContext.SaveChangesAsync();
 

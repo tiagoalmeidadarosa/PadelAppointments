@@ -6,5 +6,14 @@ namespace PadelAppointments.Models.Requests
     {
         [Required]
         public string Name { get; set; } = default!;
+
+        [Required]
+        public TimeOnly StartsAt { get; set; }
+
+        [Required]
+        public TimeOnly EndsAt { get; set; }
+
+        [Required]
+        public int Interval { get; set; }
     }
 }
