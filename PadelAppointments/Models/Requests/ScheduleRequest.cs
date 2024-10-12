@@ -9,8 +9,5 @@ namespace PadelAppointments.Models.Requests
 
         [Required]
         public TimeOnly Time { get; set; }
-
-        [Required]
-        public int CourtId { get; set; }
     }
 }

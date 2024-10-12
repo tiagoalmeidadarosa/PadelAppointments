@@ -2,7 +2,7 @@
 
 namespace PadelAppointments.Models.Authentication;
 
-public class RegisterModel
+public class RegisterAdminModel
 {
     [Required(ErrorMessage = "User Name is required")]
     public string Username { get; set; } = default!;
@@ -13,7 +13,4 @@ public class RegisterModel
 
     [Required(ErrorMessage = "Password is required")]
     public string Password { get; set; } = default!;
-
-    [Required(ErrorMessage = "Organization id is required")]
-    public Guid OrganizationId { get; set; }
 }

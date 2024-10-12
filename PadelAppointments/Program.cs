@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using PadelAppointments;
 using PadelAppointments.Models.Authentication;
+using PadelAppointments.Services;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -47,7 +48,7 @@ builder.Services.AddSwaggerGen(c =>
     c.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "PadelAppointments API",
-        Description = "Making appointments to your padel games",
+        Description = "Making appointments to your agendas",
         Version = "v1"
     });
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme()
@@ -88,16 +89,15 @@ builder.Services.AddCors(options =>
     });
 });
 
-var app = builder.Build();
+builder.Services.AddControllers();
+builder.Services.AddScoped<UserResolver>();
 
-//if (app.Environment.IsDevelopment())
-//{
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "PadelAppointments API V1");
-    });
-//}
+var app = builder.Build();
+app.UseSwagger();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "PadelAppointments API V1");
+});
 
 app.UseHttpsRedirection();
 app.UseCors();
@@ -105,6 +105,6 @@ app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapEndpoints();
+app.MapControllers();
 
-app.Run();
+await app.RunAsync();

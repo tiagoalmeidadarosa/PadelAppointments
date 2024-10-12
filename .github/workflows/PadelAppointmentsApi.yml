@@ -8,7 +8,7 @@ env:
   AZURE_WEBAPP_NAME: PadelAppointmentsApi
   AZURE_WEBAPP_PACKAGE_PATH: PadelAppointments/publish
   CONFIGURATION: Release
-  DOTNET_CORE_VERSION: 7.0.x
+  DOTNET_CORE_VERSION: 8.0.x
   WORKING_DIRECTORY: PadelAppointments
 jobs:
   build:

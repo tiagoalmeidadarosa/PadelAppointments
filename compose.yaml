@@ -1,0 +1,10 @@
+services:
+  databases:
+    build: Databases
+    ports:
+      - "41433:1433"
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=yourStrong(!)Password
+    volumes:
+      - ./databases:/mnt/external
