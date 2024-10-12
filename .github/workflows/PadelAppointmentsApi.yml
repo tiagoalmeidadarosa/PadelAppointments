@@ -41,7 +41,7 @@ jobs:
         sql-file: ${{env.WORKING_DIRECTORY}}/sql/sql-script.sql
         arguments: '-I' #(enable quoted identifiers)
     - name: Publish Artifacts
-      uses: actions/upload-artifact@v1.0.0
+      uses: actions/upload-artifact@v4
       with:
         name: webapp
         path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
